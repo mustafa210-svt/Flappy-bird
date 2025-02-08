@@ -1,5 +1,6 @@
 import pygame
-
+import random
+pygame.init()
 
 #screen 
 HEIGHT = 900
@@ -47,14 +48,15 @@ class Flappybird(pygame.sprite.Sprite):
         
     def update(self):
         global gameover 
-        if self.rect.y + self.velocity < HEIGHT - 180 and gameover == False:  
+        if self.flapping == True:  
             self.velocity += self.gravity
             self.rect.y += self.velocity
 
-        else:
+        if self.rect.y + self.velocity >= HEIGHT - 180: 
             self.rect.y = HEIGHT - 180  
             self.velocity = 0  
             gameover = True 
+            self.flapping = False
             self.index = 1  
             self.image = self.images[self.index]
         
@@ -78,13 +80,14 @@ class Pipes (pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         if position == 1:
             self.image = pygame.transform.flip(self.image, False, True)
-            self.rect.bottomleft = (x,y)
+            self.rect.bottomleft = (x,y - 100)
         else:
-            self.rect.topleft = (x, y)
+            self.rect.topleft = (x,y + 100)
     def update(self):
-        self.rect.x = self.rect.x - 5
-        if self.rect.right < 0:
-            self.kill()
+        if gameover == False:
+            self.rect.x = self.rect.x - 5
+            if self.rect.right < 0:
+                self.kill()
 
             
 
@@ -103,14 +106,15 @@ pipe_gs = pygame.sprite.Group()
 
 #While loop
 while run:
-    for event in pygame.event.get():
+    for event in pygame.event.get():     
         if event.type == pygame.QUIT:
             run = False
     
     timenow = pygame.time.get_ticks()
     if timenow - lastpipe >= pipefreq:
-        tp = Pipes(864,275,1)  
-        bp = Pipes(864,475,0)
+        pipe_height = random.randint(-100,100)
+        tp = Pipes(864,375 + pipe_height,1)  
+        bp = Pipes(864,375 + pipe_height,0)
         pipe_gs.add(tp)
         pipe_gs.add(bp)
         lastpipe = timenow
@@ -119,10 +123,28 @@ while run:
 
     #Check if spacebar is pressed, if so, make the bird jump
     keys = pygame.key.get_pressed()
-    if keys[pygame.K_SPACE]:
+    if keys[pygame.K_SPACE] and gameover == False:
         bird.jump()  #Make the bird jump on spacebar press
 
+    if len(pipe_gs) >0:
+        if bird_gs.sprites()[0].rect.left > pipe_gs.sprites()[0].rect.left and bird_gs.sprites()[0].rect.left < pipe_gs.sprites()[0].rect.right and pastpipe == False:
+            pastpipe = True
+        if bird_gs.sprites()[0].rect.left > pipe_gs.sprites()[0 ].rect.right and pastpipe == True:
+            pastpipe = False 
+            score = score + 1
+
+
+
+
         
+
+    if pygame.sprite.groupcollide(bird_gs, pipe_gs,False,False):
+        gameover = True
+
+
+
+
+
     #Drawing screen
     screen.blit(bg, (0, 0))
   
@@ -144,6 +166,13 @@ while run:
     bird.update()
     pipe_gs.update()
     screen.blit(floor, (floorx, 750))
+
+    #Drawing the score
+    Font = pygame.font.SysFont("Verdana",30)
+    text = Font.render("Score =" + str(score),True,"yellow")
+    screen.blit(text,(10,10))
+    pygame.display.update()
+
     #update the display
     pygame.display.update()
     #control the frame rate (60 frames per second)
